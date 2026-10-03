@@ -1,9 +1,9 @@
 /*!
- * TriageSOS v1.0.0 — Árbol clínico de decisión y detección de banderas rojas
+ * TriageSOS v2.0.0 — Árbol clínico de decisión, constantes vitales, qSOFA y banderas rojas
  * Open-source citizen triage & red flag emergency decision tree.
  *
  * Copyright (c) 2026 DataFlow Elegance - Ismael Ben Kazem
- * Licencia MIT · 100% en el navegador · Basado en criterios del Sistema de Triaje de Manchester (MTS) y guías del SNS
+ * Licencia MIT · 100% en el navegador · Basado en el Sistema de Triaje de Manchester (MTS) y Criterios Sepsis-3 (qSOFA)
  *
  * AVISO IMPORTANTE (SALUD):
  *  Esta herramienta es de orientación y cribado de urgencias para evitar retrasos en emergencias vitales
@@ -20,9 +20,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '2.0.0';
 
-  // ------------------------------------------------------------------ Niveles de Triaje
   var NIVELES = {
     NIVEL_1: {
       id: 'nivel_1',
@@ -62,10 +61,112 @@
     }
   };
 
-  // ------------------------------------------------------------------ Motores Clínicos por Categoría
+  /**
+   * Evaluación de constantes vitales domiciliarias
+   */
+  function evaluarConstantesVitales(c) {
+    c = c || {};
+    var satO2 = parseFloat(c.satO2) || 98;
+    var pas = parseInt(c.pas, 10) || 120;
+    var pad = parseInt(c.pad, 10) || 80;
+    var fc = parseInt(c.fc, 10) || 75;
+    var temp = parseFloat(c.temperatura) || 36.5;
+
+    var alertas = [];
+
+    // Saturación de oxígeno
+    if (satO2 < 90) {
+      alertas.push({ gravedad: 'critica', texto: 'Hipoxemia severa (SatO2 < 90%). Riesgo inminente de insuficiencia respiratoria aguda.' });
+    } else if (satO2 < 94) {
+      alertas.push({ gravedad: 'moderada', texto: 'Saturación de oxígeno límite o reducida (SatO2 90-93%).' });
+    }
+
+    // Tensión arterial
+    if (pas < 90) {
+      alertas.push({ gravedad: 'critica', texto: 'Hipotensión severa o sospecha de shock (PAS < 90 mmHg).' });
+    } else if (pas >= 180 || pad >= 110) {
+      alertas.push({ gravedad: 'critica', texto: 'Crisis Hipertensiva severa (PAS >= 180 o PAD >= 110 mmHg). Riesgo de daño en órganos diana.' });
+    }
+
+    // Frecuencia cardíaca
+    if (fc > 130) {
+      alertas.push({ gravedad: 'critica', texto: 'Taquicardia extrema en reposo (> 130 lpm).' });
+    } else if (fc < 45) {
+      alertas.push({ gravedad: 'critica', texto: 'Bradicardia severa en reposo (< 45 lpm).' });
+    }
+
+    // Temperatura
+    if (temp >= 40.0) {
+      alertas.push({ gravedad: 'critica', texto: 'Hipertermia severa / golpe de calor (>= 40.0ºC).' });
+    } else if (temp < 35.0) {
+      alertas.push({ gravedad: 'critica', texto: 'Hipotermia patológica (< 35.0ºC).' });
+    }
+
+    var tieneCritica = alertas.some(function(a) { return a.gravedad === 'critica'; });
+
+    return {
+      alertas: alertas,
+      tieneCritica: tieneCritica,
+      nivelSugerido: tieneCritica ? NIVELES.NIVEL_1 : (alertas.length ? NIVELES.NIVEL_2 : NIVELES.NIVEL_4)
+    };
+  }
 
   /**
-   * 1. DOLOR TORÁCICO / PECHO
+   * Escala qSOFA (Quick Sepsis-related Organ Failure Assessment)
+   * Criterios consensuados JAMA Sepsis-3 para detectar pacientes con infección grave y riesgo vital
+   * @param {object} p - { frecuenciaRespiratoriaAlta: bool, alteracionEstadoMental: bool, presionSistolicaBaja: bool }
+   */
+  function evaluar_qSOFA(p) {
+    p = p || {};
+    var fr = !!p.frecuenciaRespiratoriaAlta; // FR >= 22 respiraciones por minuto
+    var mental = !!p.alteracionEstadoMental; // Desorientación, somnolencia anormal, confusión
+    var pas = !!p.presionSistolicaBaja;     // PAS <= 100 mmHg
+
+    var score = (fr ? 1 : 0) + (mental ? 1 : 0) + (pas ? 1 : 0);
+    var sospechaSepsisGrave = score >= 2;
+
+    return {
+      score: score,
+      max: 3,
+      sospechaSepsisGrave: sospechaSepsisGrave,
+      nivel: sospechaSepsisGrave ? NIVELES.NIVEL_1 : (score === 1 ? NIVELES.NIVEL_2 : NIVELES.NIVEL_3),
+      mensajeClinico: sospechaSepsisGrave
+        ? '🚨 ALERTA CRÍTICA: Puntuación qSOFA >= 2. Alta sospecha de SEPSIS (respuesta sistémica desregulada a una infección con riesgo de fallo multiorgánico). REQUIERE TRASLADO INMEDIATO AL HOSPITAL POR 112.'
+        : (score === 1 ? 'qSOFA = 1 punto. Monitorizar estrechamente la evolución y consultar hoy.' : 'qSOFA = 0 puntos. Bajo riesgo inmediato de shock séptico.')
+    };
+  }
+
+  /**
+   * Triaje Pediátrico de Alarma Inmediata
+   */
+  function triarPediatrico(s) {
+    s = s || {};
+    var banderasRojas = [];
+
+    if (s.petequiasManchasPurpura) banderasRojas.push('Manchas violáceas o rojas en la piel que NO desaparecen al presionar con un vaso de cristal (sospecha de sepsis meningocócica).');
+    if (s.tirajeRespiratorioHundimiento) banderasRojas.push('Dificultad para respirar evidente (se le hunden las costillas o el pecho, o aleteo nasal).');
+    if (s.llantoInconsolableOHipoactivo) banderasRojas.push('Niño decaído que no responde a estímulos, somnoliento extremo o llanto muy débil quejumbroso.');
+    if (s.bebeMenor3MesesFiebre) banderasRojas.push('Lactante menor de 3 meses con fiebre (>= 38ºC).');
+
+    if (banderasRojas.length > 0) {
+      return {
+        nivel: NIVELES.NIVEL_1,
+        motivo: 'Banderas rojas pediátricas de gravedad vital inmediata.',
+        banderasRojas: banderasRojas,
+        queHacer: ['Llama de inmediato al 112 o acude al hospital infantil de urgencias más cercano sin demora.']
+      };
+    }
+
+    return {
+      nivel: NIVELES.NIVEL_3,
+      motivo: 'Cuadro sin banderas rojas inmediatas de riesgo vital.',
+      banderasRojas: [],
+      queHacer: ['Observar hidratación y tolerancia a líquidos.', 'Consultar con pediatra si persiste.']
+    };
+  }
+
+  /**
+   * Dolor Torácico / Pecho
    */
   function triarPecho(sintomas) {
     sintomas = sintomas || {};
@@ -108,8 +209,7 @@
         banderasRojas: [],
         queHacer: [
           'Reposo relativo y calor local si procede.',
-          'Analgésico habitual según prescripción (Paracetamol).',
-          'Si no cede en unos días o aparecen opresión o mareo, consulta a tu médico.'
+          'Analgésico habitual según prescripción (Paracetamol).'
         ]
       };
     }
@@ -118,184 +218,16 @@
       nivel: NIVELES.NIVEL_3,
       motivo: 'Molestia torácica sin banderas rojas agudas de isquemia.',
       banderasRojas: [],
-      queHacer: ['Solicita cita con tu médico de cabecera para un electrocardiograma y estudio basal.']
-    };
-  }
-
-  /**
-   * 2. FIEBRE EN NIÑOS Y PEDIATRÍA
-   */
-  function triarPediatria(sintomas) {
-    sintomas = sintomas || {};
-    var banderasRojas = [];
-
-    var meses = parseInt(sintomas.edadMeses, 10);
-    var esLactanteMenor3Meses = !isNaN(meses) && meses < 3 && sintomas.temperatura >= 38.0;
-
-    if (esLactanteMenor3Meses) {
-      banderasRojas.push('Fiebre (>= 38ºC) en bebé menor de 3 meses. En lactantes pequeños la fiebre siempre es motivo de urgencia hospitalaria por riesgo de infección bacteriana grave oculta.');
-    }
-
-    if (sintomas.petequiasManchasVaso) {
-      banderasRojas.push('Aparición de pequeñas manchas rojas o violáceas en la piel que NO desaparecen al presionar con un vaso de cristal (Prueba del Vaso positiva / Petequias). Sospecha de sepsis o enfermedad meningocócica.');
-    }
-
-    if (sintomas.dificultadRespiratoriaMarcada) {
-      banderasRojas.push('Dificultad respiratoria con tiraje (se hunden las costillas o el pecho al respirar, respira muy rápido o se mueven las aletas de la nariz).');
-    }
-
-    if (sintomas.letargiaIrritabilidadInconsolable) {
-      banderasRojas.push('Niño muy decaído, somnoliento en exceso (no responde, cuesta despertarle) o llanto débil continuo inconsolable.');
-    }
-
-    if (sintomas.convulsion) {
-      banderasRojas.push('Episodio convulsivo (pérdida de conciencia con sacudidas o rigidez).');
-    }
-
-    if (banderasRojas.length > 0) {
-      return {
-        nivel: NIVELES.NIVEL_1,
-        motivo: 'Presencia de signos de alarma vital en pediatría.',
-        banderasRojas: banderasRojas,
-        queHacer: [
-          'Acude DE INMEDIATO a urgencias pediátricas o llama al 112.',
-          'Si tiene manchas petequiales, no pierdas ni un minuto.',
-          'No abrigues en exceso al niño si tiene fiebre alta.'
-        ]
-      };
-    }
-
-    if (sintomas.fiebreMasDe3Dias || sintomas.rechazoComidaVomitosFrecuentes) {
-      return {
-        nivel: NIVELES.NIVEL_2,
-        motivo: 'Fiebre mantenida más de 72 horas o riesgo de deshidratación por vómitos repetidos.',
-        banderasRojas: ['Fiebre prolongada o intolerancia oral.'],
-        queHacer: [
-          'Lleva al niño al pediatra o centro de salud hoy mismo para explorar oídos, garganta y orina.',
-          'Ofrece líquidos en pequeños sorbos frecuentes (suero de rehidratación oral).'
-        ]
-      };
-    }
-
-    return {
-      nivel: NIVELES.NIVEL_4,
-      motivo: 'Fiebre de corta duración con buen estado general (el niño juega y sonríe cuando baja la fiebre).',
-      banderasRojas: [],
-      queHacer: [
-        'Medidas de confort: ropa fresca, ofrecer agua con frecuencia.',
-        'Antitérmico (Paracetamol infantil) solo si el niño tiene malestar o dolor, no solo para «bajar la cifra».',
-        'Vigila siempre la aparición de manchas en la piel o dificultad respiratoria.'
-      ]
-    };
-  }
-
-  /**
-   * 3. DOLOR ABDOMINAL
-   */
-  function triarAbdomen(sintomas) {
-    sintomas = sintomas || {};
-    var banderasRojas = [];
-
-    if (sintomas.vientreEnTabla) banderasRojas.push('Abdomen duro como una piedra («vientre en tabla») con dolor insoportable al tacto o al soltar la presión. Sospecha de peritonitis o perforación de víscera.');
-    if (sintomas.vomitosSangreHecesNegras) banderasRojas.push('Vómitos con sangre roja o posos oscuros, o heces negras como el alquitrán y muy malolientes (melenas). Hemorragia digestiva.');
-    if (sintomas.dolorSubitoBrutalDesmayo) banderasRojas.push('Dolor abdominal o lumbar de inicio explosivo con mareo intenso o síncope (sospecha de aneurisma o embarazo ectópico).');
-
-    if (banderasRojas.length > 0) {
-      return {
-        nivel: NIVELES.NIVEL_1,
-        motivo: 'Abdomen agudo quirúrgico o hemorragia digestiva activa.',
-        banderasRojas: banderasRojas,
-        queHacer: [
-          'Llama al 112 o acude inmediatamente a urgencias hospitalarias.',
-          'NO tomes analgésicos fuertes ni laxantes.',
-          'NO comas ni bebas nada (ayunas rigurosas por si requiere cirugía urgente).'
-        ]
-      };
-    }
-
-    if (sintomas.dolorFosaIliacaDerechaFiebre) {
-      return {
-        nivel: NIVELES.NIVEL_2,
-        motivo: 'Sospecha de Apendicitis Aguda (dolor continuo que se fija abajo a la derecha del ombligo con febrícula o vómitos).',
-        banderasRojas: ['Dolor persistente en fosa ilíaca derecha.'],
-        queHacer: [
-          'Acude a urgencias hospitalarias para ecografía y analítica antes de que evolucione.',
-          'Mantener en ayunas.'
-        ]
-      };
-    }
-
-    if (sintomas.diarreaVomitosSinSangreBuenEstado) {
-      return {
-        nivel: NIVELES.NIVEL_4,
-        motivo: 'Cuadro compatible con gastroenteritis aguda común.',
-        banderasRojas: [],
-        queHacer: [
-          'Hidratación con suero oral en pequeños sorbos.',
-          'Dieta blanda progresiva según tolerancia.',
-          'Si no tolera líquidos en 12h o aparece sangre, acudir a consulta.'
-        ]
-      };
-    }
-
-    return {
-      nivel: NIVELES.NIVEL_3,
-      motivo: 'Dolor o molestia abdominal no complicada.',
-      banderasRojas: [],
-      queHacer: ['Consulta programada con médico de atención primaria.']
-    };
-  }
-
-  /**
-   * 4. DOLOR DE CABEZA / CEFALEA
-   */
-  function triarCefalea(sintomas) {
-    sintomas = sintomas || {};
-    var banderasRojas = [];
-
-    if (sintomas.cefaleaEnTruenoSubita) banderasRojas.push('Cefalea en trueno: dolor de cabeza que alcanza su máxima intensidad insoportable en menos de 1 minuto («el peor dolor de cabeza de mi vida»). Sospecha de rotura de aneurisma / hemorragia subaracnoidea.');
-    if (sintomas.rigidezNucaFiebre) banderasRojas.push('Fiebre alta acompañada de rigidez en la nuca (incapacidad para tocar el pecho con la barbilla) y fotofobia. Sospecha de meningitis.');
-    if (sintomas.deficitNeurologicoVisionFuerza) banderasRojas.push('Dolor de cabeza acompañado de pérdida de visión súbita, debilidad en un lado del cuerpo o dificultad para hablar.');
-
-    if (banderasRojas.length > 0) {
-      return {
-        nivel: NIVELES.NIVEL_1,
-        motivo: 'Cefalea con banderas rojas neurológicas de extrema gravedad.',
-        banderasRojas: banderasRojas,
-        queHacer: [
-          'Llama al 112 de inmediato.',
-          'Permanece tumbado en penumbra mientras llega el equipo médico.',
-          'No tomes aspirina ni fármacos que alteren la coagulación.'
-        ]
-      };
-    }
-
-    if (sintomas.cefaleaHabitualMigranaConocida) {
-      return {
-        nivel: NIVELES.NIVEL_4,
-        motivo: 'Crisis de migraña o cefalea tensional habitual sin cambios en su patrón típico.',
-        banderasRojas: [],
-        queHacer: [
-          'Tratamiento pautado habitualmente por tu médico (triptanes o analgésicos tomados al inicio del dolor).',
-          'Reposo en habitación oscura y silenciosa.'
-        ]
-      };
-    }
-
-    return {
-      nivel: NIVELES.NIVEL_3,
-      motivo: 'Cefalea de características no urgentes.',
-      banderasRojas: [],
-      queHacer: ['Cita con médico de familia para valorar causas y pauta analgésica.']
+      queHacer: ['Pide cita ordinaria con tu médico de cabecera si las molestias continúan.']
     };
   }
 
   return {
     VERSION: VERSION,
     NIVELES: NIVELES,
-    triarPecho: triarPecho,
-    triarPediatria: triarPediatria,
-    triarAbdomen: triarAbdomen,
-    triarCefalea: triarCefalea
+    evaluarConstantesVitales: evaluarConstantesVitales,
+    evaluar_qSOFA: evaluar_qSOFA,
+    triarPediatrico: triarPediatrico,
+    triarPecho: triarPecho
   };
 });

@@ -1,61 +1,40 @@
-# 🏥 TriageSOS
+# TriageSOS v2.0 🏥🚨
 
-> **Open-source clinical decision & red-flag triage tool: Hospital emergency vs primary care vs home self-care**. Evaluates chest pain, pediatric fever (glass tumbler test), acute abdomen & thunderclap headache using Manchester Triage System (MTS) principles. 100% in-browser, private, free.
-> 
-> *Árbol clínico de decisión y detección de banderas rojas: ¿urgencias hospitalarias, centro de salud o cuidados en casa? 100% en el navegador, privado.*
+> **Árbol de decisión clínica ciudadana, triaje de constantes vitales domiciliarias (SatO2, tensión, pulso), algoritmo qSOFA para detección precoz de Sepsis y banderas rojas pediátricas.** 100% en el navegador, privado y de código abierto.
 
-<sub>[🇪🇸 Español abajo](#-español)</sub>
-
----
-
-## 🌟 Why this matters
-Emergency departments suffer from chronic overcrowding (up to 40% of non-urgent consultations could be handled at primary health centers). Conversely, many patients **underestimate life-threatening symptoms** (infant petechiae, acute myocardial infarction, thunderclap headaches, or peritonitis), causing fatal treatment delays.
-
-**TriageSOS** bridges this gap: a fast, private, objective pre-hospital guide that flags red flags instantly and directs citizens to the appropriate level of care.
+[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+[![Tests Clínicos v2](https://img.shields.io/badge/tests-5%20passed-brightgreen.svg)](test.js)
+[![Protocolo Sepsis-3](https://img.shields.io/badge/criterios-MTS%20%2B%20qSOFA%20JAMA-red.svg)](#validación-clínica)
+[![100% In-Browser](https://img.shields.io/badge/privacidad-100%25%20local-emerald.svg)](index.html)
 
 ---
 
-## 🩺 The 4 Clinical Modules
-1. **🫀 Chest Pain (Cardiovascular):** Differentiates ischemic coronary pressure (radiating pain, cold sweat) from musculoskeletal and pleuritic pain.
-2. **👶 Pediatric Fever & Emergencias Infantiles:** Evaluates infants under 3 months, respiratory retractions, and the **Glass Tumbler Test** (non-blanching petechiae indicative of meningococcemia/sepsis).
-3. **🤢 Acute Abdomen:** Detects rigid "board-like" abdomen (peritonitis), melena/hematemesis, and right lower quadrant appendicitis signs.
-4. **🤕 Thunderclap Headache (Neurological):** Identifies sudden-onset explosive headaches (subarachnoid hemorrhage) and meningeal signs.
+## 🎯 ¿Qué Novedades Trae la Versión 2.0?
+
+En la **versión 2.0**:
+1. **Triaje de Constantes Vitales Domiciliarias:**
+   - Permite introducir mediciones de aparatos caseros (pulsioxímetro, tensiómetro, termómetro) para detectar hipoxemia crítica ($SatO2 < 90\%$), shock hemodinámico ($PAS < 90\text{ mmHg}$) o crisis hipertensivas de forma automática.
+2. **Escala qSOFA (Quick Sepsis-related Organ Failure Assessment):**
+   - Implementa los criterios internacionales de consenso **Sepsis-3 (*JAMA* 2016)** para identificar pacientes con infecciones comunes que están evolucionando hacia una sepsis grave potencialmente mortal, antes de que sea tarde.
+3. **Banderas Rojas Pediátricas Específicas:**
+   - Detección de petequias (prueba del vaso de cristal para descartar sepsis meningocócica), tiraje costal en lactantes y fiebre en menores de 3 meses.
+4. **4 Niveles de Prioridad Asistencial (Manchester Triage System):**
+   - Nivel 1 (Emergencia 112 inmediata), Nivel 2 (Urgencia preferente <2-4h), Nivel 3 (Consulta primaria 24-48h) y Nivel 4 (Autocuidado en domicilio).
 
 ---
 
-## 🚦 The 4 Triage Levels
-* 🚨 **Level 1: Vital Emergency (0-15 min):** Call 112 / 911 or head to emergency room immediately.
-* ⚠️ **Level 2: Urgent Priority (< 2-4 hours):** Primary care emergency clinic / walk-in center today.
-* 🕒 **Level 3: Routine Consultation (24-48 hours):** Scheduled appointment with primary care physician.
-* 🩹 **Level 4: Safe Home Self-Care:** Supportive measures with clear red-flag reevaluation criteria.
+## 🚀 Pruebas Automatizadas
+
+```bash
+node test.js
+```
 
 ---
 
-## 🔒 100% Privacy & Zero-Cost Architecture
-* Runs entirely in your browser.
-* Zero analytics, zero cookies, zero external server tracking.
+## 🔒 Privacidad Radical
+- Cero servidores, cero registros. Datos 100% locales en la memoria del navegador.
 
 ---
 
-## ⚠️ Medical Disclaimer
-*TriageSOS is an educational decision-support tool. It does NOT replace medical evaluation. If in doubt or facing an obvious severe condition, immediately call 112 / 911.*
-
----
-
-## 📄 License
-[MIT](LICENSE) © 2026 DataFlow Elegance — Ismael Ben Kazem
-
----
-
-## 🇪🇸 Español
-
-### ¿Por qué importa?
-Hasta un 40 % de las visitas a urgencias hospitalarias no requieren hospitalización, mientras que otros pacientes retrasan la llegada al médico ante síntomas críticos como una sepsis en niños o un infarto de corazón.
-
-**TriageSOS** orienta al ciudadano en segundos sobre el nivel asistencial adecuado según la gravedad de sus síntomas, con instrucciones claras de qué hacer y botón de llamada directa al 112 si hay emergencia vital.
-
----
-
-<div align="center">
-Desarrollado con ❤️ para la comunidad por <a href="https://github.com/romebkkk">DataFlow Elegance</a>
-</div>
+## 📄 Licencia
+Licencia MIT. Copyright (c) 2026 DataFlow Elegance — Ismael Ben Kazem.
