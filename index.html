@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TriageSOS — ¿Cuándo ir a Urgencias? Árbol clínico y banderas rojas</title>
+  <meta name="description" content="Guía clínica orientativa basada en triaje hospitalario para saber cuándo acudir a urgencias, cuándo ir al centro de salud o cuándo manejar en casa con seguridad.">
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --primary: #0284C7;
+      --danger: #DC2626;
+      --warning: #EA580C;
+      --notice: #D97706;
+      --success: #059669;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --radius: 16px;
+      --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      background: #E0F2FE;
+      color: #0369A1;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-size: 2.1rem;
+      font-weight: 900;
+      color: #0C4A6E;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .cat-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-cat {
+      padding: 1.1rem;
+      background: #F8FAFC;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .btn-cat:hover { border-color: var(--primary); background: #F0F9FF; }
+    .btn-cat.active {
+      border-color: var(--primary);
+      background: #E0F2FE;
+    }
+    .btn-cat-title { font-weight: 800; font-size: 1.05rem; color: #0C4A6E; }
+    .btn-cat-desc { font-size: 0.8rem; color: var(--text-muted); }
+
+    .checklist-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .check-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      background: #F8FAFC;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.1s;
+    }
+    .check-label:hover { background: #F1F5F9; }
+    .check-input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+      margin-top: 0.15rem;
+      cursor: pointer;
+    }
+
+    .result-box {
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+      border-left: 6px solid;
+    }
+    .res-nivel_1 { background: #FEF2F2; border-color: var(--danger); color: #991B1B; }
+    .res-nivel_2 { background: #FFF7ED; border-color: var(--warning); color: #9A3412; }
+    .res-nivel_3 { background: #FFFBEB; border-color: var(--notice); color: #92400E; }
+    .res-nivel_4 { background: #ECFDF5; border-color: var(--success); color: #065F46; }
+
+    .btn-call-112 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 1rem;
+      background: var(--danger);
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 800;
+      border-radius: 12px;
+      text-decoration: none;
+      margin-top: 1rem;
+      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    }
+
+    .disclaimer-box {
+      background: #FFFBEB;
+      border-left: 4px solid var(--notice);
+      padding: 1rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.85rem;
+      color: #78350F;
+      margin-top: 1.5rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">🏥 ORIENTACIÓN Y TRIAJE CLÍNICO CIUDADANO</div>
+    <h1>TriageSOS</h1>
+    <p class="subtitle">¿Cuándo acudir a urgencias, al centro de salud o manejarlo en casa?</p>
+  </header>
+
+  <div class="card">
+    <label style="display:block; font-weight:800; margin-bottom:0.75rem; color:#0C4A6E; font-size:1.05rem;">
+      Selecciona el síntoma principal a consultar:
+    </label>
+
+    <div class="cat-selector">
+      <button class="btn-cat active" id="cat_pecho" onclick="cambiarCategoria('pecho')">
+        <span class="btn-cat-title">🫀 Pecho y Tórax</span>
+        <span class="btn-cat-desc">Dolor opresivo, punzadas, ahogo</span>
+      </button>
+      <button class="btn-cat" id="cat_infantil" onclick="cambiarCategoria('infantil')">
+        <span class="btn-cat-title">👶 Fiebre y Pediatría</span>
+        <span class="btn-cat-desc">Fiebre en niños, manchas, decaimiento</span>
+      </button>
+      <button class="btn-cat" id="cat_abdomen" onclick="cambiarCategoria('abdomen')">
+        <span class="btn-cat-title">🤢 Abdomen y Vientre</span>
+        <span class="btn-cat-desc">Dolor fuerte, apendicitis, vómitos</span>
+      </button>
+      <button class="btn-cat" id="cat_cabeza" onclick="cambiarCategoria('cabeza')">
+        <span class="btn-cat-title">🤕 Cefalea y Cabeza</span>
+        <span class="btn-cat-desc">Dolor de cabeza brusco, nuca rígida</span>
+      </button>
+    </div>
+
+    <div id="questionsContainer"></div>
+    <div id="resultContainer"></div>
+
+    <div class="disclaimer-box">
+      <strong>⚠️ Aviso clínico primordial:</strong> TriageSOS es un sistema de orientación preventivo. <strong>Ante un mal estado general evidente, pérdida de consciencia o sospecha de peligro grave, no dudes: llama inmediatamente al 112</strong> o acude a urgencias.
+    </div>
+  </div>
+</div>
+
+<script src="triagesos.js"></script>
+<script>
+  'use strict';
+
+  var catActual = 'pecho';
+  var respuestas = {};
+
+  var configCategorias = {
+    pecho: {
+      titulo: 'Comprobación de dolor torácico / pecho:',
+      preguntas: [
+        { id: 'dolorOpresivo', texto: '¿Es un dolor opresivo (como una losa o presión pesada en el centro del pecho)?' },
+        { id: 'irradiacionBrazoMandibula', texto: '¿Se extiende hacia el brazo izquierdo, cuello, mandíbula o espalda?' },
+        { id: 'sudorFrioMareoDisnea', texto: '¿Se acompaña de sudoración fría, náuseas, mareo o dificultad para respirar?' },
+        { id: 'dolorDesgarroBrusco', texto: '¿Ha sido un dolor desgarrador súbito muy agudo en el pecho o la espalda?' },
+        { id: 'dolorEmpeoraRespirarTos', texto: '¿Empeora claramente al respirar hondo o toser y hay fiebre?' },
+        { id: 'dolorReproduciblePalpacion', texto: '¿Aumenta claramente cuando te aprietas la costilla con el dedo (dolor localizado)?' }
+      ],
+      fnTriaje: function(r) { return TriageSOS.triarPecho(r); }
+    },
+    infantil: {
+      titulo: 'Comprobación de fiebre y síntomas en niños:',
+      extraInput: `
+        <div style="background:#F1F5F9; border-radius:10px; padding:0.75rem; margin-bottom:1rem;">
+          <label style="font-weight:700; font-size:0.9rem;">Edad del niño (meses):</label>
+          <input type="number" id="edadMesesInput" value="24" min="0" max="180" style="padding:0.4rem; border-radius:6px; border:1px solid var(--border); width:80px; margin-left:0.5rem;" onchange="actualizarRespuestas()">
+          <span style="font-size:0.85rem; color:var(--text-muted); margin-left:0.5rem;">(ej: 2 meses, 12 meses...)</span>
+        </div>
+      `,
+      preguntas: [
+        { id: 'temperaturaAlta', texto: '¿Tiene fiebre (temperatura axilar >= 38.0ºC)?' },
+        { id: 'petequiasManchasVaso', texto: '🔴 PRUEBA DEL VASO: ¿Tiene manchas rojas/violáceas que NO desaparecen al apretar con un vaso transparente?' },
+        { id: 'dificultadRespiratoriaMarcada', texto: '¿Respira con esfuerzo (se le hunden las costillas o mueve las aletas de la nariz)?' },
+        { id: 'letargiaIrritabilidadInconsolable', texto: '¿Está excesivamente adormilado, cuesta mucho despertarle o tiene llanto débil continuo?' },
+        { id: 'convulsion', texto: '¿Ha tenido una convulsión o pérdida de conocimiento?' },
+        { id: 'fiebreMasDe3Dias', texto: '¿Lleva con fiebre más de 72 horas (3 días) seguidos?' }
+      ],
+      fnTriaje: function(r) {
+        var mesesEl = document.getElementById('edadMesesInput');
+        r.edadMeses = mesesEl ? parseInt(mesesEl.value, 10) : 24;
+        r.temperatura = r.temperaturaAlta ? 38.5 : 36.5;
+        return TriageSOS.triarPediatria(r);
+      }
+    },
+    abdomen: {
+      titulo: 'Comprobación de dolor abdominal / vientre:',
+      preguntas: [
+        { id: 'vientreEnTabla', texto: '¿Tiene el abdomen duro como una tabla y duele muchísimo al tocar o al soltar de golpe?' },
+        { id: 'vomitosSangreHecesNegras', texto: '¿Vómitos con sangre o heces negras como el alquitrán muy malolientes?' },
+        { id: 'dolorSubitoBrutalDesmayo', texto: '¿Dolor súbito incapacitante con mareo intenso o desmayo?' },
+        { id: 'dolorFosaIliacaDerechaFiebre', texto: '¿Dolor continuo fijado abajo a la derecha del ombligo con febrícula (sospecha apendicitis)?' },
+        { id: 'diarreaVomitosSinSangreBuenEstado', texto: '¿Diarrea o vómitos comunes sin sangre y con buen estado general (gastroenteritis)?' }
+      ],
+      fnTriaje: function(r) { return TriageSOS.triarAbdomen(r); }
+    },
+    cabeza: {
+      titulo: 'Comprobación de dolor de cabeza / cefalea:',
+      preguntas: [
+        { id: 'cefaleaEnTruenoSubita', texto: '¿Ha sido un dolor de cabeza explosivo y súbito («el peor dolor de mi vida» en < 1 minuto)?' },
+        { id: 'rigidezNucaFiebre', texto: '¿Tiene fiebre alta y rigidez de nuca (incapacidad para tocar el pecho con la barbilla)?' },
+        { id: 'deficitNeurologicoVisionFuerza', texto: '¿Se acompaña de pérdida de visión, debilidad en un lado o dificultad para hablar?' },
+        { id: 'cefaleaHabitualMigranaConocida', texto: '¿Es tu dolor de cabeza o migraña habitual de siempre sin novedades?' }
+      ],
+      fnTriaje: function(r) { return TriageSOS.triarCefalea(r); }
+    }
+  };
+
+  function cambiarCategoria(cat) {
+    catActual = cat;
+    respuestas = {};
+    ['pecho', 'infantil', 'abdomen', 'cabeza'].forEach(function(c) {
+      document.getElementById('cat_' + c).classList.toggle('active', c === cat);
+    });
+    renderPreguntas();
+  }
+
+  function renderPreguntas() {
+    var conf = configCategorias[catActual];
+    var qBox = document.getElementById('questionsContainer');
+
+    var html = '<h3 style="font-size:1.1rem; color:#0C4A6E; margin-bottom:0.75rem;">' + conf.titulo + '</h3>';
+    if (conf.extraInput) html += conf.extraInput;
+
+    html += '<div class="checklist-container">';
+    conf.preguntas.forEach(function(p) {
+      html += `
+        <label class="check-label">
+          <input type="checkbox" class="check-input" id="${p.id}" onchange="actualizarRespuestas()">
+          <span>${p.texto}</span>
+        </label>
+      `;
+    });
+    html += '</div>';
+
+    qBox.innerHTML = html;
+    actualizarRespuestas();
+  }
+
+  function actualizarRespuestas() {
+    var conf = configCategorias[catActual];
+    conf.preguntas.forEach(function(p) {
+      var el = document.getElementById(p.id);
+      respuestas[p.id] = el ? el.checked : false;
+    });
+
+    var res = conf.fnTriaje(respuestas);
+    renderResultado(res);
+  }
+
+  function renderResultado(res) {
+    var rBox = document.getElementById('resultContainer');
+    var niv = res.nivel;
+
+    var html = `
+      <div class="result-box res-${niv.id}">
+        <div style="font-size:1.25rem; font-weight:900; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.5rem;">
+          <span>${niv.icono}</span>
+          <span>${niv.nombre}</span>
+        </div>
+        <div style="font-size:0.95rem; font-weight:700; margin-bottom:0.5rem; opacity:0.9;">
+          ⏱️ Plazo recomendado: ${niv.tiempoRecomendado}
+        </div>
+        <p style="font-size:1rem; margin-bottom:0.75rem;">
+          <strong>Acción:</strong> ${niv.accion}
+        </p>
+        <p style="font-size:0.9rem; margin-bottom:0.75rem;">
+          <strong>Evaluación:</strong> ${res.motivo}
+        </p>
+    `;
+
+    if (res.banderasRojas && res.banderasRojas.length > 0) {
+      html += `
+        <div style="background:rgba(255,255,255,0.7); border-radius:8px; padding:0.75rem; margin-bottom:0.75rem; font-size:0.85rem;">
+          <strong>🚨 Banderas rojas detectadas:</strong>
+          <ul style="margin:0.25rem 0 0 1.25rem;">
+            ${res.banderasRojas.map(function(b){ return '<li>'+b+'</li>'; }).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    if (res.queHacer && res.queHacer.length > 0) {
+      html += `
+        <div style="font-size:0.9rem;">
+          <strong>Qué hacer ahora:</strong>
+          <ul style="margin:0.25rem 0 0 1.25rem;">
+            ${res.queHacer.map(function(q){ return '<li>'+q+'</li>'; }).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    if (niv.id === 'nivel_1') {
+      html += `
+        <a href="tel:112" class="btn-call-112">
+          📞 LLAMAR AL 112 AHORA
+        </a>
+      `;
+    }
+
+    html += '</div>';
+    rBox.innerHTML = html;
+  }
+
+  // Inicializar
+  renderPreguntas();
+</script>
+</body>
+</html>
